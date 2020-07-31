@@ -1,30 +1,82 @@
-import React from 'react';
-import Navbar from './Navbar';
-import logo from './logo.svg';
+import React, {Component} from 'react';
+import { Route, Switch, Redirect } from "react-router-dom";
+import { auth, handleUserProfile } from './firebase/utils';
 import './App.css';
 
-function App() {
+import Navbar from './components/Navbar';
+
+import Default from './components/Default';
+import Cart from './components/Cart';
+import Login from './components/Login';
+import About from './components/About';
+import ProductList from './components/ProductList';
+
+
+const initialState = {
+  currentUser: null
+};
+
+
+class App extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      ...initialState
+    };
+  }
+
+  authListener = null;
+
+  componentDidMount() {
+    this.authListener = auth.onAuthStateChanged(async userAuth => {
+      if (userAuth) {
+        const userRef = await handleUserProfile(userAuth);
+        userRef.onSnapshot(snapshot => {
+          this.setState({
+            currentUser: {
+              id: snapshot.id,
+              ...snapshot.data()
+            }
+          })
+        })
+      }
+
+      this.setState({
+        ...initialState
+      });
+    });
+  }
+
+  componentWillUnmount() {
+    this.authListener();
+  }
+
+  render() {
+    const { currentUser } = this.state;
+
+
+
   return (
     <>
-    <Navbar/>
+    <Navbar currentUser= {currentUser}/>
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <Switch>
+    <Route exact path="/" component={ProductList} />
+          <Route path="/about" component={About} />
+          <Route path="/login"  render={() => currentUser ? <Redirect to="/" /> : (
+                <Login />
+            )} />
+          <Route path="/cart" component={Cart} />
+          <Route component={Default} />
+
+    </Switch>
+   
     </div>
+    
+    
     </>
-  );
+   );
+  }
 }
 
 export default App;
